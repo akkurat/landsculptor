@@ -1,0 +1,13 @@
+{
+  "private": true,
+  "dependencies": {
+    "delaunator": "^4.0.1",
+    "three": "^0.115.0"
+  },
+  "devDependencies": {
+    "typescript": "^3.8.3"
+  },
+  "browserslist": [
+    "last 1 Chrome versions"
+  ]
+}
