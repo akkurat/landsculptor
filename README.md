@@ -1,8 +1,10 @@
 # Install
 
+```
 yarn install
-yarn install --global parcel
-
+yarn global add parcel
+```
 # Run
-
+```
 parcel index.html
+```
