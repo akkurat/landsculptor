@@ -4,7 +4,7 @@ import Delaunator from 'delaunator'
 
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-
+import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
 // Thanks @prisoner849 for the combination of three + delaunator
 // https://discourse.threejs.org/t/three-js-delaunator/4952
@@ -21,6 +21,12 @@ function run() {
   document.body.appendChild(canvas);
 
   var controls = new OrbitControls(camera, canvas);
+
+  const moveControls = new TransformControls(camera, canvas);
+  moveControls.addEventListener('change', render);
+  moveControls.addEventListener('dragging-changed', event => {
+    controls.enabled = !event.value;
+  });
 
   var light = new THREE.DirectionalLight(0xffffff, 1.5);
   light.position.setScalar(100);
@@ -101,6 +107,8 @@ function run() {
     new THREE.MeshLambertMaterial({ color: "purple", wireframe: true })
   );
   scene.add(mesh);
+  scene.add(moveControls);
+  moveControls.attach(mesh);
 
   var gui = new GUI();
   gui.add(mesh.material, "wireframe");
