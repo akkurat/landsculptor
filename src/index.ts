@@ -6,6 +6,8 @@ import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
+ const filename = require('../textures/grasslight-big.jpg')
+
 // Thanks @prisoner849 for the combination of three + delaunator
 // https://discourse.threejs.org/t/three-js-delaunator/4952
 // https://codepen.io/prisoner849/pen/bQWOjY
@@ -29,23 +31,24 @@ function run() {
   });
 
   var light = new THREE.DirectionalLight(0xffffff, 1.5);
-  light.position.setScalar(100);
+  light.position.set( 0, 251, 0 ); 
   scene.add(light);
-  scene.add(new THREE.AmbientLight(0xffffff, 0.5));
+  scene.add( new THREE.AmbientLight( 0xFFFFFF, 3 ) );
 
   const size = { x: 200, z: 200 };
   const borderPoints = 30;
   const points3d = [];
 
-  // // Border Points
-  // for (let x = 0; x <= 200; x += 10) {
-  //   points3d.push(new THREE.Vector3(x, 0, 0));
-  //   points3d.push(new THREE.Vector3(x, 0, size.z));
-  // }
-  // for (let z = 0; z <= 200; z += 10) {
-  //   points3d.push(new THREE.Vector3(0, 0, z));
-  //   points3d.push(new THREE.Vector3(size.x, 0, z));
-  // }
+  const startX = -300, startZ = -250
+  // Border Points
+  for (let x = -300; x <= 200; x += 10) {
+    points3d.push(new THREE.Vector3(x, 0, startZ));
+    points3d.push(new THREE.Vector3(x, 0, size.z));
+  }
+  for (let z = -200; z <= 200; z += 10) {
+    points3d.push(new THREE.Vector3(startX, 0, z));
+    points3d.push(new THREE.Vector3(size.x, 0, z));
+  }
 
   function circle(x, z, r, h = 0, layers = 1) : Vector3[] {
     const points = []
@@ -81,12 +84,12 @@ function run() {
 
 
 
-  var geom = new BufferGeometry().setFromPoints(points3d);
+  var geom = new THREE.Geometry().setFromPoints(points3d);
   var cloud = new THREE.Points(
     geom,
     new THREE.PointsMaterial({ color: 0x99ccff, size: 2 })
   );
-  scene.add(cloud);
+  // scene.add(cloud);
 
   // triangulate x, z
   var indexDelaunay = Delaunator.from(
@@ -96,19 +99,37 @@ function run() {
   );
 
   var meshIndex = []; // delaunay index => three.js index
-  for (let i = 0; i < indexDelaunay.triangles.length; i++) {
-    meshIndex.push(indexDelaunay.triangles[i]);
+  for (let i = 0; i < indexDelaunay.triangles.length; i+=3) {
+    const t = indexDelaunay.triangles
+    const face = new THREE.Face3(t[i], t[i+1], t[i+2])
+    geom.faces.push(face);
   }
 
-  geom.setIndex(meshIndex); // add three.js index to the existing geometry
+  // geom.setIndex(meshIndex); // add three.js index to the existing geometry
+  // geom.faces.push
+
   geom.computeVertexNormals();
+  assignUVs(geom)
+  const material =  new THREE.MeshLambertMaterial({
+     map: createGrass(), 
+     side: THREE.DoubleSide,
+     alphaTest: 0.5
+     })
   var mesh = new THREE.Mesh(
     geom, // re-use the existing geometry
-    new THREE.MeshLambertMaterial({ color: "purple", wireframe: true })
+    material
   );
+
+  // mesh.position.y = +5;
+  // mesh.rotation.x = - Math.PI / 2;
+  // mesh.receiveShadow = true;
   scene.add(mesh);
   scene.add(moveControls);
   moveControls.attach(mesh);
+
+  // const plane = new THREE.Mesh(new THREE.PlaneBufferGeometry(430, 100), material);
+  // scene.add(plane)
+
 
   var gui = new GUI();
   gui.add(mesh.material, "wireframe");
@@ -156,6 +177,39 @@ function line( vStart: THREE.Vector3, vEnd: THREE.Vector3 , points: number) {
   }
   return out;
 
+}
+
+function createGrass() {
+  var loader = new THREE.TextureLoader()
+  // loader.setTranscoderPath( 'js/libs/basis/' );
+	// 			loader.detectSupport( renderer );
+
+  var groundTexture = loader.load(filename)
+        groundTexture.encoding = THREE.sRGBEncoding;
+        return groundTexture
+  
+
+}
+
+function assignUVs(geometry) {
+  geometry.faceVertexUvs[0] = [];
+  geometry.faces.forEach(function(face) {
+      var components = ['x', 'y', 'z'].sort(function(a, b) {
+          return Math.abs(face.normal[a]) > Math.abs(face.normal[b]);
+      });
+
+      var v1 = geometry.vertices[face.a];
+      var v2 = geometry.vertices[face.b];
+      var v3 = geometry.vertices[face.c];
+
+      geometry.faceVertexUvs[0].push([
+          new THREE.Vector2(v1[components[0]], v1[components[1]]),
+          new THREE.Vector2(v2[components[0]], v2[components[1]]),
+          new THREE.Vector2(v3[components[0]], v3[components[1]])
+      ]);
+
+  });
+  geometry.uvsNeedUpdate = true;
 }
 
 
