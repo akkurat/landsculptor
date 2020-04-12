@@ -1,12 +1,14 @@
 import * as THREE from 'three';
-import { BufferGeometry, Vector3 } from 'three'
+import { BufferGeometry, Vector3, Vector2, VertexColors } from 'three'
 import Delaunator from 'delaunator'
+
+import paper from 'paper'
 
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
- const filename = require('../textures/grasslight-big.jpg')
+import filename from 'url:../textures/grasslight-big.jpg'
 
 // Thanks @prisoner849 for the combination of three + delaunator
 // https://discourse.threejs.org/t/three-js-delaunator/4952
@@ -20,7 +22,11 @@ function run() {
     antialias: true
   });
   var canvas = renderer.domElement;
-  document.body.appendChild(canvas);
+  document.querySelector('#three').appendChild(canvas);
+  var paperCanvas = document.getElementById('paper').appendChild( document.createElement('canvas'));
+		// Create an empty project and a view for the canvas:
+    paper.setup(paperCanvas);
+    
 
   var controls = new OrbitControls(camera, canvas);
 
@@ -213,4 +219,6 @@ function assignUVs(geometry) {
 }
 
 
-run();
+document.addEventListener("DOMContentLoaded", function(event) {
+  run();
+});

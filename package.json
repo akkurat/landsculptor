@@ -2,10 +2,12 @@
   "private": true,
   "dependencies": {
     "delaunator": "^4.0.1",
+    "paper": "^0.12.4",
     "three": "^0.115.0"
   },
   "devDependencies": {
-    "parcel": "^1.12.4",
+    "less": "^3.11.1",
+    "parcel": "^2.0.0-alpha.3.2",
     "typescript": "^3.8.3"
   },
   "browserslist": [
