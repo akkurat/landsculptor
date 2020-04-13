@@ -2,9 +2,8 @@
 
 ```
 yarn install
-yarn global add parcel
 ```
 # Run
 ```
-parcel index.html
+yarn run start
 ```
