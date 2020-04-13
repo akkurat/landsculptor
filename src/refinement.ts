@@ -7,6 +7,7 @@ import { Tri, drawTriangle } from "./base";
 import '../pages/refinement.less'
 import { sleep } from "./helpers";
 import { Vector3 } from "three";
+import { finished } from "stream";
 
 async function run() {
     var paperCanvas = document.getElementById('refinement_paper').appendChild(document.createElement('canvas'));
@@ -38,7 +39,7 @@ async function run() {
           //   meshable.refineMultiple(5)
           meshable.mesh()
           if(placeds && placeds.length) {
-            const color = new Color(meshable.steiner?'lightgreen':'magenta')
+            const color = new Color(meshable.state == 'steiner' ?'lightgreen':'magenta')
             for(const placed of placeds) {
             const c = new paper.Path.Circle(new paper.Point(placed.seC.x, placed.seC.y), placed.seL/2);
             c.strokeColor = color
@@ -46,10 +47,14 @@ async function run() {
             vertex.strokeColor = color
             }
           } else {
+              if(meshable.state == 'finished') {
+                  alert('fin')
+
+              }
           }
         paper.project.activeLayer.fitBounds( paper.view.bounds )
           
-      if(play.checked) {
+      if(play.checked && meshable.state != 'finished') {
           setTimeout(step, 50)
       }
   }

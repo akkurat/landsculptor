@@ -9,7 +9,7 @@ export type P = { x: number, y: number, edgeIdx?: number }
 
 export class Meshable {
   _del: any
-  steiner: any
+  state: string = 'decroach'
 
   constructor(public _meshTolerance = 1e-4) { }
 
@@ -62,16 +62,21 @@ export class Meshable {
     // this._mesh = cdt2d(this._allPoints.map(p => [p.x, p.y]))//, this._edges)//, {exterior: false})
   }
 
-  refineStep(min_length = 10): {seC:P, seL:number}[] {
-    if(this.steiner) {
-      return this.placeSteiner(min_length)
-    }
-    else{
-      const placed = this.decroach(min_length)
+  refineStep(min_length = 40): {seC:P, seL:number}[] {
+    if(this.state == 'steiner') {
+      const placed = this.placeSteiner(min_length)
       if(!placed || placed.length == 0) {
-        this.steiner = true
+        this.state = 'decroach' // Back to decroach
       }
       return placed
+
+    } else if(this.state == 'decroach' ) {
+      const placed = this.decroach(min_length)
+      if(!placed || placed.length == 0) {
+        this.state = 'steiner'
+      }
+      return placed
+
     }
   }
   placeSteiner(min_length: number): { seC: P; seL: number }[] {
@@ -82,17 +87,23 @@ export class Meshable {
 
         const {center,r}  = tri.circumference()
         if(this.isInHull(center)) {
-
-        this._steinerPoints.push(center)
-        return [{seC:center, seL: r*2}]
+          this._steinerPoints.push(center)
+          return [{ seC: center, seL: r * 2 }]
         }
       }
     }
+      return []
     
 
   }
   isInHull(p:P) {
-    return true
+    const hullPoints = this._del.hull
+    const path = []
+    for( let i=0; i<hullPoints.length; i++ ) {
+      path.push({point: this._allPoints[hullPoints[i]]})
+    }
+
+    return isInsideCircularPath(p.x, p.y, path)
   }
 
 
@@ -107,7 +118,6 @@ export class Meshable {
 
 
       const inCircle = (p, idx) =>
-        // !ownindices.includes(idx) &&
         Math.sqrt((p.x - seC.x) ** 2 + (p.y - seC.y) ** 2) < seL / 2 * (1 - this._meshTolerance)
 
       const res = this._allPoints.find(inCircle)
@@ -264,3 +274,21 @@ export function circle(x, z, r, h = 0, layers = 1): { x: number, y: number }[] {
 }
 
 
+//Returns bool
+function isInsideCircularPath(x,y,segments){
+  //Test each segment for intersection
+  var number_vertexes = segments.length;
+  var i = 0;
+  var j = 0;
+  var contains = false;
+
+  //Foreach segment, let's test intersection and flip the sign of the contains variable
+  //Test from the test point going right
+  for(i = 0, j = number_vertexes-1; i < number_vertexes; j = i++){
+    //If we're in the y range and we intersect, then that's what we want, flip the sign of contains
+    if( ((segments[i].point.y > y) != (segments[j].point.y > y)) && (x < (segments[j].point.x - segments[i].point.x) * (y - segments[i].point.y) / (segments[j].point.y - segments[i].point.y) + segments[i].point.x)){
+      contains = !contains;
+    }
+  }
+  return contains;
+}
