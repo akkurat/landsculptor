@@ -1,16 +1,32 @@
 {
   "private": true,
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "watch": "webpack --watch",
+    "start": "webpack-dev-server --open",
+    "build": "webpack"
+  },
   "dependencies": {
+    "cdt2d": "^1.0.0",
     "delaunator": "^4.0.1",
     "paper": "^0.12.4",
     "three": "^0.115.0"
   },
   "devDependencies": {
+    "@babel/core": "^7.0.0",
+    "@types/node": "^13.11.1",
+    "clean-webpack-plugin": "^3.0.0",
+    "css-loader": "^3.5.2",
+    "file-loader": "^6.0.0",
+    "html-webpack-plugin": "^4.2.0",
+    "html-webpack-template": "^6.2.0",
     "less": "^3.11.1",
-    "parcel": "^2.0.0-alpha.3.2",
-    "typescript": "^3.8.3"
-  },
-  "browserslist": [
-    "last 1 Chrome versions"
-  ]
+    "less-loader": "^5.0.0",
+    "style-loader": "^1.1.3",
+    "ts-loader": "^6.2.2",
+    "typescript": "^3.8.3",
+    "webpack": "^4.42.1",
+    "webpack-cli": "^3.3.11",
+    "webpack-dev-server": "^3.10.3"
+  }
 }

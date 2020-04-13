@@ -1,20 +1,25 @@
+
 import * as THREE from 'three';
 import { BufferGeometry, Vector3, Vector2, VertexColors } from 'three'
 import Delaunator from 'delaunator'
 
-import paper from 'paper'
+import * as paper from 'paper'
+import { Color } from 'paper'
 
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
-import filename from 'url:../textures/grasslight-big.jpg'
+const filename = require('../textures/grasslight-big.jpg')
+import { createRange } from './helpers';
+
+import '../index.less'
 
 // Thanks @prisoner849 for the combination of three + delaunator
 // https://discourse.threejs.org/t/three-js-delaunator/4952
 // https://codepen.io/prisoner849/pen/bQWOjY
 
-function run() {
+export function run() {
   var scene = new THREE.Scene();
   var camera = new THREE.PerspectiveCamera(60, 1, 1, 1000);
   camera.position.setScalar(150);
@@ -56,36 +61,36 @@ function run() {
   //   points3d.push(new THREE.Vector3(size.x, 0, z));
   // }
 
-  function circle(x, z, r, h = 0, layers = 1) : Vector3[] {
+  function circle(x, z, r, h = 0, layers = 1): Vector3[] {
     const points = []
-    const range: number[] = createRange(0, Math.PI * 2, 20)
+    const numInnerPoints = 24
 
-    range.forEach((v, idx) => {
-      const sin = Math.sin(v)
-      const cos = Math.cos(v)
-      for (let i = layers; i >= 1; i--) {
+    for (let i = layers; i >= 1; i--) {
+      const range: number[] = createRange(0, Math.PI * 2, 2 ** (i-1) * numInnerPoints)
+      range.forEach((v, idx) => {
+        const sin = Math.sin(v)
+        const cos = Math.cos(v)
         // if (idx % (layers - i) == 0) {
-          const factor = r * i / layers
-          points.push(new THREE.Vector3(factor * cos + x, h, factor * sin + z))
+        const factor = r * i / layers
+        points.push(new THREE.Vector3(factor * cos + x, h, factor * sin + z))
         // }
-      }
-    });
+      })
+    }
+    // points.push(new THREE.Vector3( x, h, z))
     return points;
   }
 
   const xAxis = new Vector3( 1, 0, 0 )
 
-  points3d.push( ...line(new Vector3(),new Vector3(30,0,0), 5 ) )
-  points3d.push( ...line(new Vector3(0,0,5),new Vector3(30,0,10), 10 ) )
-  // points3d.push( ...(circle(50, 100, 50, -10 ).map( v => v.applyAxisAngle( xAxis, Math.PI/30))) )
-  // points3d.push( ...circle(150, 100, 20, 50) )
-  // points3d.push( ...circle(20, 20, 33, 23 ) )
+  points3d.push( ...(circle(50, 100, 50, -10 ).map( v => v.applyAxisAngle( xAxis, Math.PI/30))) )
+  points3d.push( ...circle(150, 100, 20, 50) )
+  points3d.push( ...circle(20, 20, 33, 23 ) )
 
   // // points3d.push( ...line(new Vector3(),new Vector3(-20,30,20), 20 ) )
   // // points3d.push( ...line(new Vector3(),new Vector3(20,30,-40), 20 ) )
-  // points3d.push( ...line(new Vector3(100,40,130),new Vector3(100, 0,30), 20 ) )
-  // points3d.push( ...line(new Vector3(100,40,-100),new Vector3(100, 0,30), 20 ) )
-  // points3d.push( ...line(new Vector3(-50,0,0),new Vector3(0,0,200), 20 ) )
+  points3d.push( ...line(new Vector3(100,40,130),new Vector3(100, 0,30), 20 ) )
+  points3d.push( ...line(new Vector3(100,40,-100),new Vector3(100, 0,30), 20 ) )
+  points3d.push( ...line(new Vector3(-50,0,0),new Vector3(0,0,200), 20 ) )
 
   // new Vector3().apply
 
@@ -117,7 +122,7 @@ function run() {
 
   for( let p of points3d) {
     const vertex = new paper.Path.Circle( new paper.Point(p.x, p.z),.2 )
-    vertex.fillColor='red';
+    vertex.fillColor= new Color('red');
   }
 
   const cifs : {center: Vector2, r: number}[] =[]
@@ -136,7 +141,7 @@ function run() {
     // Create a Paper.js Path to draw a line into it:
     const tri = Tri.ofArray(t[i], t[i+1], t[i+2], points3d, v=>v.x, v=>v.z)
     const path = new paper.Path()
-    path.strokeColor = 'black';
+    path.strokeColor = new Color('black')
 		drawTriangle(tri, path);
     
     const cif = tri.circumference()
@@ -148,6 +153,7 @@ function run() {
     // paper.view.draw();
     }
   }
+  //@ts-ignore
   paper.view.draw();
 
 
@@ -156,8 +162,9 @@ function run() {
     if( Math.abs(cif.r) < 50) {
       const circumcircle = new paper.Path.Circle(new paper.Point(cif.center.x, cif.center.y), cif.r)
       const cifp = new paper.Path.Circle(new paper.Point(cif.center.x, cif.center.y), .2)
-      cifp.fillColor = 'green';
-      circumcircle.strokeColor = 'green';
+      const g = new Color('green')
+      cifp.fillColor = g;
+      circumcircle.strokeColor = g;
     } else {
       console.log( cif )
     }
@@ -166,18 +173,18 @@ function run() {
 
   const allPoints =newPoints.concat(points3d); 
 
-  const allPointsDel  = Delaunator.from( allPoints.map(v => [v.x, v.z]));
-  for( let i=0; i<allPointsDel.triangles.length; i+=3 )
-  {
+  // const allPointsDel  = Delaunator.from( allPoints.map(v => [v.x, v.z]));
+  // for( let i=0; i<allPointsDel.triangles.length; i+=3 )
+  // {
 
-    const t = allPointsDel.triangles
-    const tri = Tri.ofArray(t[i], t[i+1], t[i+2], allPoints, v=>v.x, v=>v.z)
+  //   const t = allPointsDel.triangles
+  //   const tri = Tri.ofArray(t[i], t[i+1], t[i+2], allPoints, v=>v.x, v=>v.z)
     
-    const path = new paper.Path()
-    path.strokeColor = 'blue';
-		drawTriangle(tri, path);
-  }
-  paper.view.draw()
+  //   const path = new paper.Path()
+  //   path.strokeColor = 'blue';
+	// 	drawTriangle(tri, path);
+  // }
+  // paper.view.draw()
   
 
   paper.project.activeLayer.fitBounds( paper.view.bounds )
@@ -234,30 +241,7 @@ function run() {
   }
 }
 
-function drawTriangle(tri: Tri, path?) {
-  path = path || new paper.Path();
-  // Give the stroke a color
-  var start = new paper.Point(tri.a.x, tri.a.y);
-  // Move to start and draw a line from there
-  path.moveTo(start);
-  // Note that the plus operator on Point objects does not work
-  // in JavaScript. Instead, we need to call the add() function:
-  path.lineTo(new paper.Point(tri.b.x, tri.b.y));
-  path.lineTo(new paper.Point(tri.c.x, tri.c.y));
-  // Draw the view now:
-  path.closePath();
-}
 
-function createRange(start: number, end: number, steps: number, inclusive=false) {
-  const dsteps = inclusive ? steps - 1 : steps 
-  const delta = (end - start) / dsteps
-  const out = Array(steps)
-
-  for( let i = 0; i< out.length; i++) {
-   out[i] =  start + i * delta
-  }
-  return out;
-}
 
 function line( vStart: THREE.Vector3, vEnd: THREE.Vector3 , points: number) {
   const delta = vEnd.clone().sub( vStart ).multiplyScalar(1/(points-1))
@@ -325,14 +309,23 @@ interface V2 {
 export class Tri {
   l_ab: number; l_bc: number; l_ca: number
   constructor( public a: V2, public b: V2, public c: V2) {
-    this.l_ab = this.distance(a,b)
-    this.l_bc = this.distance(b,c)
-    this.l_ca = this.distance(c,a)
+    this.l_ab = Tri.distance(a,b)
+    this.l_bc = Tri.distance(b,c)
+    this.l_ca = Tri.distance(c,a)
   }
 
-  distance(a,b) {
+  static distance(a,b) {
     return Math.sqrt((a.x-b.x)**2+(a.y-b.y)**2)
   }
+
+
+  segmentCenters = () => 
+    [
+      Tri.vMean(this.a, this.b),
+      Tri.vMean(this.b, this.c),
+      Tri.vMean(this.c, this.a),
+    ]
+  segmentLengths = () => [this.l_ab, this.l_bc, this.l_ca]
 
   maxLength() {
     return Math.max(this.l_ab, this.l_bc, this.l_ca)
@@ -348,7 +341,6 @@ export class Tri {
   circumference() {
     
     // https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcenter_coordinates
-    // this ref. would make formulas unreadable
 
     const a = Tri.vSub(this.a, this.a) // should be zero
     const b = Tri.vSub(this.b, this.a)
@@ -370,6 +362,9 @@ export class Tri {
   static vAdd(b,a) {
     return {x:b.x+a.x, y: b.y+a.y}
   }
+  static vMean(b,a) {
+    return {x:0.5*(b.x+a.x), y: 0.5*(b.y+a.y)}
+  }
   /**
    * 
    * @param _a index
@@ -380,13 +375,17 @@ export class Tri {
    * @param y
    * 
    */
-  static ofArray <T>( _a: number, _b: number, _c: number, points: T[], x: (T) => number, y: (T) => number) {
+  static ofArray_ <T>( [a,b,c]:number[], points: T[], x?: (T) => number, y?: (T) => number) {
+    return Tri.ofArray(a,b,c,points,x,y)
+  }
+  static ofArray <T>( _a: number, _b: number, _c: number, points: T[], x?: (T) => number, y?: (T) => number) {
     const tripoints = [_a,_b,_c].map(eP)
     //@ts-ignore this is perfectly valid
     return new Tri(...tripoints)
     function eP(idx) {
       const p = points[idx]
-      return new Vector2(x(p), y(p))
+      //@ts-ignore
+      return new Vector2(x?x(p):p.x, y?y(p):p.y)
 
     }
   }
@@ -394,6 +393,17 @@ export class Tri {
   
 }
 
-document.addEventListener("DOMContentLoaded", function(event) {
-  run();
-});
+
+export function drawTriangle(tri: Tri, path?) {
+  path = path || new paper.Path();
+  // Give the stroke a color
+  var start = new paper.Point(tri.a.x, tri.a.y);
+  // Move to start and draw a line from there
+  path.moveTo(start);
+  // Note that the plus operator on Point objects does not work
+  // in JavaScript. Instead, we need to call the add() function:
+  path.lineTo(new paper.Point(tri.b.x, tri.b.y));
+  path.lineTo(new paper.Point(tri.c.x, tri.c.y));
+  // Draw the view now:
+  path.closePath();
+}

@@ -3,7 +3,7 @@ import * as THREE from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 
-import filename from 'url:./grass.jpg'
+const filename = require('./grass.jpg')
 var camera, scene, renderer, stats;
 
 var mesh;
@@ -114,6 +114,7 @@ function init() {
     var material = new THREE.MeshBasicMaterial( {
         side: THREE.DoubleSide,
         map: groundTexture,
+        //@ts-ignore
         vertexColors: THREE.FaceColors
     } );
 
@@ -129,6 +130,7 @@ function init() {
 
     //
 
+    //@ts-ignore
     stats = new Stats();
     document.body.appendChild( stats.dom );
 
