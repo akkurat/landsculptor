@@ -338,6 +338,18 @@ export class Tri {
     return this.l_ab + this.l_bc + this.l_ca
   }
 
+
+  minAngle() {
+
+    const sides = [this.l_ab,this.l_bc,this.l_ca].sort((a,b) => a-b)
+    const [min, middle, max] = sides
+
+    const cosalpha = ( max**2+middle**2 - min**2 ) / (2 * max * middle)
+    return Math.acos(cosalpha)
+
+  }
+
+
   circumference() {
     
     // https://en.wikipedia.org/wiki/Circumscribed_circle#Circumcenter_coordinates

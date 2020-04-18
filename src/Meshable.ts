@@ -2,26 +2,33 @@ import { createRange } from "./helpers"
 import { Tri } from "./base"
 
 import Delaunator from 'delaunator'
+import { Vector2, Vector3 } from "three"
 
 var cdt2d = require('cdt2d')
 
 export type P = { x: number, y: number, edgeIdx?: number }
+export type A3 = [number,number,number]
+export type A2 = [number,number]
 
 export class Meshable {
   _del: any
   state: string = 'decroach'
+  _steinerBlacklist: A3[] = []
 
-  constructor(public _meshTolerance = 1e-4) { }
+  constructor(public _meshTolerance = .2) { }
 
   _points: P[] = []
 
-  _edges: number[][] = []
+  _edges: A2[] = []
+  _allEdges: A2[] = []
 
-  _mesh: number[][]
+  _mesh: A3[]
 
   _antiCroachPoints: P[] = []
   _steinerPoints: P[] = []
   _allPoints: P[] = []
+
+  min_length = 5
 
 
   /**
@@ -50,7 +57,8 @@ export class Meshable {
 
   mesh() {
     // TODO: for more than one refinement: Track all points
-    this._allPoints = this._antiCroachPoints.concat(this._points,this._steinerPoints)
+    this._allPoints = this._points.concat(this._antiCroachPoints,this._steinerPoints)
+
     this._del = Delaunator.from(this._allPoints.map(p => [p.x, p.y]))
 
     this._mesh =  []
@@ -58,44 +66,120 @@ export class Meshable {
     for( let i=0; i<t.length; i+=3 ) {
       this._mesh.push( [t[i],t[i+1],t[i+2]] )
     }
+    this._allEdges = this.sanitizeHullEdges()
 
     // this._mesh = cdt2d(this._allPoints.map(p => [p.x, p.y]))//, this._edges)//, {exterior: false})
   }
+  sanitizeHullEdges(): A2[] {
+    const hullPoints = this._del.hull
 
-  refineStep(min_length = 40): {seC:P, seL:number}[] {
-    if(this.state == 'steiner') {
-      const placed = this.placeSteiner(min_length)
-      if(!placed || placed.length == 0) {
-        this.state = 'decroach' // Back to decroach
+    const e2s = ([i0, i1]: A2): string => i0 + '|' + i1
+    const set = new Set(this._edges.map(e2s))
+    const edges = this._edges.slice()
+    for( let i=0; i<hullPoints.length; i++ ) {
+      const i0 = hullPoints[i]
+      const next = (i + 1) % hullPoints.length 
+      const i1 = hullPoints[next]
+      const normEdge: [number,number] = i0<i1?[i0,i1]:[i1,i0]
+      const es = e2s(normEdge)
+      if(!set.has(es)) {
+        edges.push(normEdge)
       }
-      return placed
+      
+    }
+    return edges;
+  }
+
+  refineStep(): {seC:P, seL:number, edge:any}[] {
+    if(this.state == 'steiner') {
+      const placed = this.placeSteiner()
+      // if(!placed || placed.length == 0) 
+        this.state = 'decroach' // Back to decroach
+      // return placed
 
     } else if(this.state == 'decroach' ) {
-      const placed = this.decroach(min_length)
-      if(!placed || placed.length == 0) {
+      const placed = this.decroach()
+      if(!placed || placed.length == 0) 
         this.state = 'steiner'
-      }
       return placed
 
     }
   }
-  placeSteiner(min_length: number): { seC: P; seL: number }[] {
+  placeSteiner(): { seC: P; seL: number, edge: any }[] {
+    
     for( const t of this._mesh ) {
       const tri = Tri.ofArray_(t,this._allPoints)
       // TODO: go for angle
-      if(tri.minLength() < tri.perimeter()*0.15 || tri.maxLength() > tri.perimeter()*.46) {
+      if(this.angleCriterion(tri)) {
 
         const {center,r}  = tri.circumference()
-        if(this.isInHull(center)) {
-          this._steinerPoints.push(center)
-          return [{ seC: center, seL: r * 2 }]
+        if( this.isInHull(center) && !this.inBlacklist(t) ) {
+          {
+            const pt = this._allPoints.findIndex(p => this.inCircle(p, center, r))
+            if(pt>-1) {
+              const t = this._mesh.find(t => t.includes(pt))
+              const idx = t.indexOf(pt)
+
+              const idx0 = t[idx]
+              const p0 = this._allPoints[idx0]
+              const idx1 = t[(idx + 1) % 3]
+              const p1 = this._allPoints[idx1]
+
+              return this.splitAndAdd(p0, p1, t[(idx+2)%3], idx0+'-'+idx1)
+
+            } else {
+
+              this._steinerPoints.push(center)
+              this.mesh()
+              let e = "" + t
+              // if(this.removeInsertedSteinerPoint(t)) {
+              //   e = "x"+e+"x"
+              // }
+              return [{ seC: center, seL: r * 2, edge: e }]
+            }
+          }
         }
       }
     }
       return []
-    
-
   }
+  inBlacklist(t: A3) {
+    const pSet = new Set(t)
+    for(let [a,b,c] of this._steinerBlacklist) {
+      if(pSet.has(a) && pSet.has(b) && pSet.has(c) ) {
+        return true;
+      }
+    }
+    return false
+  }
+  removeInsertedSteinerPoint(t:A3) {
+
+    const lastIdx = this._allPoints.length-1
+    const triags = this._mesh.filter(t => t.includes(lastIdx))
+
+    // TODO: check on encroaching
+    const badTriangle = triags.map(tri => Tri.ofArray_(tri, this._allPoints))
+      .find(this.angleCriterion)
+    
+    if(badTriangle) {
+      this._steinerPoints.pop()
+      this._steinerBlacklist.push(t)
+      return true;
+    }
+
+
+    return false;
+  }
+
+
+  private circumCriterion(tri: Tri) {
+    return tri.minLength() < tri.perimeter() * 0.15 || tri.maxLength() > tri.perimeter() * .46
+  }
+
+  private angleCriterion(tri: Tri) {
+    return tri.minAngle() < 19/180*Math.PI
+  }
+
   isInHull(p:P) {
     const hullPoints = this._del.hull
     const path = []
@@ -106,54 +190,93 @@ export class Meshable {
     return isInsideCircularPath(p.x, p.y, path)
   }
 
-
-  decroach(min_length) {
-
-    const splitAndAdd = (p0, p1) => {
-      const seC = Tri.vMean(p0, p1) as P
-      const seL = Tri.distance(p0, p1)
-      if (min_length > seL) {
-        return []
-      }
-
-
-      const inCircle = (p, idx) =>
-        Math.sqrt((p.x - seC.x) ** 2 + (p.y - seC.y) ** 2) < seL / 2 * (1 - this._meshTolerance)
-
-      const res = this._allPoints.find(inCircle)
-      if (res) {
-        this._antiCroachPoints.push(seC)
-        const placed = []
-        placed.push(...splitAndAdd(p0, seC) )
-        placed.push(...splitAndAdd(seC, p1) )
-        placed.push({seC, seL})
-        return placed
-        // this._points[]
-
-      }
+  splitAndAdd = (p0, p1, thirdPoint, edge) => {
+    const seC = Tri.vMean(p0, p1)
+    const seL = Tri.distance(p0, p1)
+    if (this.min_length > seL) {
       return []
     }
+
+    const p2 = this._allPoints[thirdPoint]
+
+    
+
+
+    const inCircum = (p, idx) =>
+      // idx != thirdPoint && 
+      this.inCircle(p, seC, seL/2)
+
+    const close = ({ x, y }) => Math.abs(x - seC.x) < this._meshTolerance
+      && Math.abs(y - seC.y) < this._meshTolerance
+
+    const p01 = Tri.vSub(p1,p0)
+
+    const res = this._allPoints.filter(inCircum)
+    if (res.length) {
+
+      const closePoints = res.filter(close)
+
+      // Not sure why they even occur
+
+      const alignedPoint = res.find( p => Math.abs(crossProduct(p01, Tri.vSub(p, p0))) < 0.5)
+
+      console.log(alignedPoint)
+
+      if (!alignedPoint && closePoints.length == 0) {
+        this._antiCroachPoints.push(seC)
+        const placed = []
+        // placed.push(...splitAndAdd(p0, seC) )
+        // placed.push(...splitAndAdd(seC, p1) )
+        placed.push({ seC, seL, edge })
+
+        return placed
+        // this._points[]
+      } else if (closePoints.length > 1) {
+
+      }
+
+    }
+    return []
+  }
+
+  private inCircle(p: any, seC: { x: number; y: number }, r: number) {
+    return Math.sqrt((p.x - seC.x) ** 2 + (p.y - seC.y) ** 2) < r - this._meshTolerance
+  }
+
+  decroach() {
+
 
     // Todo: dedupe
     // function onlyUnique(value, index, self) { 
     //  return self.indexOf(value) === index;
     //  }
-    const eds = this._mesh.flatMap(v => [[v[0], v[1]], [v[1], v[2]], [v[2], v[0]]])
 
-    const getLength = ([idx0, idx1]: number[]) => Tri.distance(this._allPoints[idx0], this._allPoints[idx1])
-
-   const presentEdges = eds.map(([idx0, idx1]) => {
+    const richPoint = (p0, p1, idx0, idx1, other?) => ({ l: Tri.distance(p0, p1), p0, p1, idx0, idx1, other })
+    const presentEdges = this._allEdges.map( ([idx0,idx1]) => {
       const p0 = this._allPoints[idx0]
       const p1 = this._allPoints[idx1]
-      return {l:Tri.distance(p0,p1), p0, p1, idx0, idx1}
-    }).sort( (e1,e2) => e2.l - e1.l ) 
+      return richPoint(p0, p1, idx0, idx1)
+    } );
+    // this._mesh.forEach((idxs) => {
+
+    //   const pts = idxs.map(idx => this._allPoints[idx])
+
+    //   for (let i = 0; i < 3; i++) {
+    //     presentEdges.push(richPoint(pts[i], pts[(i + 1) % 3], idxs[i], idxs[(i + 1) % 3], idxs[(i + 2) % 3]))
+    //   }
+    // }
+    // )
 
 
+    presentEdges.sort( (e1,e2) => e2.l - e1.l ) 
 
-    for (const {p0,p1} of presentEdges) {
+    // const presentEdges = []
+    // this.forEachTriangleEdge( (e,p0,p1) => presentEdges.push({e,p0,p1}))
 
-      const placed = splitAndAdd(p0, p1)
-      if (placed) { // splitting has been done -> remesh
+    for (const {p0,p1,idx0,idx1,other} of presentEdges) {
+
+      const placed = this.splitAndAdd(p0, p1, other, idx0+"<|-"+other+"-|>"+idx1)
+      if (placed.length > 0) { // splitting has been done -> remesh
         return placed
       }
 
@@ -173,77 +296,27 @@ export class Meshable {
   }
 
 
-refineMultiple(steps = 20) {
-  // TODO: 
-  // split encroached segments
-
-  const handledEdges: Map<number, number> = new Map()
-
-  function pushHandledEdge(idx1, idx2) {
-    idx1 < idx2 ? handledEdges.set(idx1, idx2) : handledEdges.set(idx2, idx1)
-  }
-
-  function isEdgeHandled(idx1, idx2) {
-    if (idx1 < idx2) {
-      return handledEdges.get(idx1) == idx2
-    } else {
-      return handledEdges.get(idx2) == idx1
-    }
-  }
-
-  let cnt = 0;
-  for (const f of this._mesh) {
-    cnt++
-    if (cnt > steps)
-      return
-    //@ts-ignore
-    const tri = Tri.ofArray(...f, this._points)
-
-    const segmentCenters = tri.segmentCenters()
-    const segmentLengths = tri.segmentLengths()
-
-
-
-
-    for (let i = 0; i < segmentCenters.length; i++) {
-      // TODO: for more than one refinement: Track all points
-      // TODO: optimize search for x / y (having sorted arrays by x/y)
-      // look for the square around the circle first
-      // and only then do costly multiplication
-      if (isEdgeHandled(f[i], f[(i + 1) % 3]))
-        continue
-
-      const seC = segmentCenters[i], seL = segmentLengths[i]
-
-
-      const inCircle = (p, idx) =>
-        !f.includes(idx) && // Ignore own points 
-        Math.sqrt((p.x - seC.x) ** 2 + (p.y - seC.y) ** 2) < seL * (1 - this._meshTolerance)
-
-      const res = this._points.find(inCircle)
-      if (res) {
-        this._antiCroachPoints.push(seC)
-        // this._points[]
-
+forEachTriangleEdge(callback: (e,p,q) => void) {
+  function nextHalfedge(e) { return (e % 3 === 2) ? e - 2 : e + 1; }
+  const delaunay = this._del
+  const points = this._allPoints
+  for (let e = 0; e < delaunay.triangles.length; e++) {
+      if (e > delaunay.halfedges[e]) {
+          const p = points[delaunay.triangles[e]];
+          const q = points[delaunay.triangles[nextHalfedge(e)]];
+          callback(e, p, q);
       }
-
-      pushHandledEdge(f[i], f[(i + 1) % 3])
-
-
-    }
-
   }
-
-  // remap constrained segments
-
-  // insert steiner points
-
 }
 
 
 }
 
 
+export function line_(x1, y1, x2, y2, points: number): { x: number, y: number }[] {
+  return line(new Vector3(x1,y1), new Vector3(x2,y2), points)
+  
+}
 export function line(vStart: THREE.Vector3, vEnd: THREE.Vector3, points: number): { x: number, y: number }[] {
   const delta = vEnd.clone().sub(vStart).multiplyScalar(1 / (points - 1))
 
@@ -291,4 +364,8 @@ function isInsideCircularPath(x,y,segments){
     }
   }
   return contains;
+}
+
+function crossProduct(a:P, b:P) {
+  return a.x * b.y - a.y * b.x
 }
