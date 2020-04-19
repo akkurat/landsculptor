@@ -21,9 +21,11 @@ async function run() {
   const play = document.getElementById("play_auto") as HTMLInputElement
   const btn = document.getElementById("btn_play") as HTMLButtonElement
   const input_angle = document.getElementById("input_angle") as HTMLButtonElement
+  const input_maxsize = document.getElementById("input_maxSize") as HTMLButtonElement
 
   btn.addEventListener('click', ev => step())
   input_angle.addEventListener('change', ev => {initMesh(); step()})
+  input_maxsize.addEventListener('change', ev => {initMesh(); step()})
 
   // This file should become a class
   let meshable: Meshable
@@ -40,7 +42,7 @@ async function run() {
     const color = new Color(meshable.state == 'steiner' ? 'lightgreen' : 'magenta')
     const placeds = meshable.refineStep()
     //   meshable.refineMultiple(5)
-    if(counter%30 == 0) {
+    if(!play.checked || counter%30 == 0) {
       draw()
       await sleep(0) // Necessary in order to let paper update the GUI
     }
@@ -75,11 +77,13 @@ async function run() {
   function initMesh() {
     doneSpan.textContent = "Rædy"
     ps.project.activeLayer.removeChildren()
-    const angle = parseFloat(input_angle.value)
-    meshable = new Meshable({minAngle: angle});
-    meshable.addPoints(circle(50, 50, 33, 23), true);
+    const minAngle = parseFloat(input_angle.value)
+    const maxLength = parseFloat(input_maxsize.value)
+    meshable = new Meshable({minAngle, maxLength});
+    meshable.addPoints(circle(50, 50, 33, 23, 32), true);
     meshable.addPoints([{ x: 0, y: 0 }, { x: 0, y: 300 }, { x: 300, y: 300 }, { x: 300, y: 0 }], true);
     meshable.addPoints_([[50, 150], [50, 100], [120, 120]], true);
+    meshable.addPoints(circle(127, 129, 7, 10, 12), true);
     //   meshable.addPoints( circle(50, 100, 50, -10 ), true )
     // meshable.addPoints( circle(150, 100, 20, 50), true )
     // meshable.addPoints( line(new Vector3(), new Vector3(200,50), 30)  )

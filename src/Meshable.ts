@@ -165,7 +165,7 @@ export class Meshable {
     for( const t of this._mesh ) {
       const tri = Tri.ofArray_(t,this._allPoints)
       // TODO: go for angle
-      if(this.angleCriterion(tri)) {
+      if(this.badTriangleCriterion(tri)) {
 
         const {center,r}  = tri.circumference()
         // if( this.isInHull(center) && !this.inBlacklist(t) )
@@ -203,8 +203,8 @@ export class Meshable {
     return tri.minLength() < tri.perimeter() * 0.15 || tri.maxLength() > tri.perimeter() * .46
   }
 
-  private angleCriterion(tri: Tri) {
-    return tri.minAngle() < this.meshOptions.minAngle/180*Math.PI
+  private badTriangleCriterion(tri: Tri) {
+    return tri.minAngle() < this.meshOptions.minAngle/180*Math.PI || tri.maxLength() > this.meshOptions.maxLength 
   }
 
   isInHull(p:P) {
@@ -351,9 +351,8 @@ export function line(vStart: THREE.Vector3, vEnd: THREE.Vector3, points: number)
   return out;
 
 }
-export function circle(x, z, r, h = 0, layers = 1): { x: number, y: number }[] {
+export function circle(x, z, r, h = 0, numInnerPoints=24, layers = 1): { x: number, y: number }[] {
   const points = []
-  const numInnerPoints = 24
 
   for (let i = layers; i >= 1; i--) {
     const range: number[] = createRange(0, Math.PI * 2, 2 ** (i - 1) * numInnerPoints)
