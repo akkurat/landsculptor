@@ -8,7 +8,13 @@
     <!-- TODO: use some templating engine like posthtml -->
     <!-- <a href="textures.html">Textures</a><a href="refinement.html">Rupert</a> -->
     <div id="refinement_content">
-        <div><label>play</label><input id="play_auto" type="checkbox"><button id="btn_play">Play</button></div>
+        <div>
+            <label>play</label><input id="play_auto" type="checkbox" checked>
+            <button id="btn_play">Play</button>
+            <label for="input_angle">Min Angle (Deg)</label>
+            <input id="input_angle" type="number" value="30">
+            <span id="refinement_finished" >
+        </div>
         <div id="refinement_paper"></div>
     </div>
 

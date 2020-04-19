@@ -204,7 +204,7 @@ export class Meshable {
   }
 
   private angleCriterion(tri: Tri) {
-    return tri.minAngle() < 33/180*Math.PI
+    return tri.minAngle() < this.meshOptions.minAngle/180*Math.PI
   }
 
   isInHull(p:P) {

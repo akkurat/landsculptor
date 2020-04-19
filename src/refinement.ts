@@ -10,6 +10,7 @@ import { finished } from "stream";
 import { PaperZoom } from "./PaperZoom";
 import { PaperScope } from "paper/dist/paper-core";
 
+const doneSpan = document.getElementById('refinement_finished');
 async function run() {
   var paperCanvas = document.getElementById('refinement_paper').appendChild(document.createElement('canvas'));
   // Create an empty project and a view for the canvas:
@@ -17,36 +18,33 @@ async function run() {
   ps.setup(paperCanvas);
   new PaperZoom(ps.project)
 
-  const meshable = new Meshable({})
-
-
-
-  meshable.addPoints(circle(50, 50, 33, 23), true)
-  meshable.addPoints([{ x: 0, y: 0 }, { x: 0, y: 300 }, { x: 300, y: 300 }, { x: 300, y: 0 }], true)
-  meshable.addPoints_([[50, 150], [50, 100], [120, 120]], true)
-  //   meshable.addPoints( circle(50, 100, 50, -10 ), true )
-  // meshable.addPoints( circle(150, 100, 20, 50), true )
-  // meshable.addPoints( line(new Vector3(), new Vector3(200,50), 30)  )
-  meshable.addPoints(line_(50, 170, 160, 140, 5).concat(line_(160, 140, 170, 293, 12)))
-  //   meshable.addPoints( line(new Vector3(0,200), new Vector3(200,250), 30)  )
-
-  //   ps.project.activeLayer.fitBounds( ps.view.bounds )
-
-  meshable.init()
-  draw()
-
   const play = document.getElementById("play_auto") as HTMLInputElement
   const btn = document.getElementById("btn_play") as HTMLButtonElement
+  const input_angle = document.getElementById("input_angle") as HTMLButtonElement
 
   btn.addEventListener('click', ev => step())
+  input_angle.addEventListener('change', ev => {initMesh(); step()})
+
+  // This file should become a class
+  let meshable: Meshable
+  initMesh();
 
 
-  const step = () => {
+  let counter = 0;
+
+
+  const step = async () => {
+    doneSpan.textContent = "Wørking"
+    counter++;
     ps.project.activeLayer.removeChildren()
     const color = new Color(meshable.state == 'steiner' ? 'lightgreen' : 'magenta')
     const placeds = meshable.refineStep()
     //   meshable.refineMultiple(5)
-    draw()
+    if(counter%30 == 0) {
+      draw()
+      await sleep(0) // Necessary in order to let paper update the GUI
+    }
+
     if (placeds && placeds.length) {
       for (const placed of placeds) {
         const p = new ps.Point(placed.seC.x, placed.seC.y);
@@ -59,15 +57,37 @@ async function run() {
       }
     } else {
       if (meshable.state == 'finished') {
-        alert('fin')
+        draw()
+        await sleep(0)
+        doneSpan.textContent = "Døne"
+        
 
       }
     }
     // ps.project.activeLayer.fitBounds( ps.view.bounds )
 
     if (play.checked && meshable.state != 'finished') {
-      setTimeout(step, 1)
+      // setTimeout(step, 20)
+      step()
     }
+  }
+
+  function initMesh() {
+    doneSpan.textContent = "Rædy"
+    ps.project.activeLayer.removeChildren()
+    const angle = parseFloat(input_angle.value)
+    meshable = new Meshable({minAngle: angle});
+    meshable.addPoints(circle(50, 50, 33, 23), true);
+    meshable.addPoints([{ x: 0, y: 0 }, { x: 0, y: 300 }, { x: 300, y: 300 }, { x: 300, y: 0 }], true);
+    meshable.addPoints_([[50, 150], [50, 100], [120, 120]], true);
+    //   meshable.addPoints( circle(50, 100, 50, -10 ), true )
+    // meshable.addPoints( circle(150, 100, 20, 50), true )
+    // meshable.addPoints( line(new Vector3(), new Vector3(200,50), 30)  )
+    meshable.addPoints(line_(50, 170, 160, 140, 5).concat(line_(160, 140, 170, 293, 12)));
+    //   meshable.addPoints( line(new Vector3(0,200), new Vector3(200,250), 30)  )
+    //   ps.project.activeLayer.fitBounds( ps.view.bounds )
+    meshable.init();
+    draw();
   }
 
   function draw() {
