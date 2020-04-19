@@ -28,5 +28,6 @@ export function mergePointsIntoSegment(vertices: number[][], segments: number[][
 
     }
 
-
+    // todo
+    return false;
 }
