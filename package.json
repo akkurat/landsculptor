@@ -16,8 +16,11 @@
   },
   "devDependencies": {
     "@babel/core": "^7.0.0",
+    "@types/chai-almost": "^1.0.1",
     "@types/mocha": "^7.0.2",
     "@types/node": "^13.11.1",
+    "chai": "^4.2.0",
+    "chai-almost": "^1.0.1",
     "clean-webpack-plugin": "^3.0.0",
     "css-loader": "^3.5.2",
     "file-loader": "^6.0.0",
