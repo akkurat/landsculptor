@@ -84,6 +84,8 @@ async function run() {
     const minAngle = parseFloat(input_angle.value)
     const maxLength = parseFloat(input_maxsize.value)
     meshable = new Meshable({minAngle, maxLength});
+    meshable.averageinterpolator = ({x,y}) => ({x,y,value:0})
+    meshable.interpolator = ({x,y}) => ({x,y,value:0})
     const v = (value) =>  (p) => ({...p, value})
     meshable.addPoints(circle(50, 50, 33, v(10) , 32), true);
     meshable.addPoints([{ x: 0, y: 0, value: -3 }, { x: 0, y: 300, value: 5 }, { x: 300, y: 300, value:10 }, { x: 300, y: 0, value:5 }], true);
