@@ -1,6 +1,7 @@
 import * as assert from 'assert'
 import { mergePointsIntoSegment, distanceToPoint } from '../src/Sanitzing'
 import { use } from 'chai';
+import * as barycentric from 'barycentric'
 
 const  chai = require('chai');
 const  chaiAlmost = require( 'chai-almost');
@@ -79,3 +80,27 @@ function diagonal(a, x, y, refine=false) {
 function diagonalThrough(a, x, y) {
   return distanceToPoint([-a+x, a+y], [a+x, -a+y], [x, y]);
 }
+
+describe('barycentric', function () {
+
+  const triangle = [[10,10],[-10,10],[0,0]]
+
+  describe('vertices1', function () {
+    const result = barycentric(triangle, [10,10])
+      it('e0', () => assert.equal(result, [1,0,0] ) )
+  })
+  describe('vertices2', function () {
+    const result = barycentric(triangle, [-10,10])
+      it('e0', () => assert.equal(result, [0,1,0] ) )
+  })
+  describe('vertices3', function () {
+    const result = barycentric(triangle, [0,0])
+      it('e0', () => assert.equal(result, [0,0,1] ) )
+  })
+  describe('midpointTop', function () {
+    const result = barycentric(triangle, [0,10])
+      it('e0', () => assert.equal(result, [0.5,0.5,0] ) )
+  })
+
+})
+

@@ -8,6 +8,7 @@
     "build": "webpack"
   },
   "dependencies": {
+    "barycentric": "^1.0.1",
     "cdt2d": "^1.0.0",
     "clean-pslg": "^1.1.2",
     "delaunator": "^4.0.1",
