@@ -13,6 +13,7 @@
     "clean-pslg": "^1.1.2",
     "delaunator": "^4.0.1",
     "paper": "^0.12.4",
+    "rbf": "^1.1.5",
     "three": "^0.115.0"
   },
   "devDependencies": {

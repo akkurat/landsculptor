@@ -1,6 +1,7 @@
 
+import RBF from 'rbf'
 import * as THREE from 'three';
-import { BufferGeometry, Vector3, Vector2, VertexColors, DoubleSide, FaceColors } from 'three'
+import { BufferGeometry, Vector3, Vector2, VertexColors, DoubleSide, FaceColors, RGBFormat } from 'three'
 
 import { Color, PaperScope } from 'paper'
 
@@ -49,6 +50,12 @@ export async function run() {
 
   console.log("iterations", i)
 
+  const originalPointsAndSplitSegments = meshable._points.concat(meshable._antiCroachPoints);
+  const coordinates = originalPointsAndSplitSegments.map(({x,y}) => [x,y])
+  const values = originalPointsAndSplitSegments.map(({z}) => z)
+  const interpolator = RBF( coordinates, values, "multiquadric", 0.04 )
+
+  meshable._steinerPoints.forEach( v => v.setZ(interpolator([v.x, v.y])))
 
 
   const geom = new THREE.Geometry().setFromPoints(meshable._allPoints)
@@ -61,8 +68,8 @@ export async function run() {
   const material = new THREE.MeshLambertMaterial({
     side:DoubleSide,
   //@ts-ignore
-    //  vertexColors: FaceColors,
-      color: 'green' 
+     vertexColors: FaceColors,
+      // color: 'green' 
     });
 
 
@@ -110,58 +117,37 @@ export async function run() {
 
 }
 
-function simplemesh() {
-  var material = new THREE.MeshStandardMaterial( { color : 0x00cc00, side: DoubleSide } );
-
-//create a triangular geometry
-var geometry = new THREE.Geometry();
-geometry.vertices.push( new THREE.Vector3( -50, -50, 0 ) );
-geometry.vertices.push( new THREE.Vector3(  50, -50, 0 ) );
-geometry.vertices.push( new THREE.Vector3(  50,  50, 0 ) );
-geometry.vertices.push( new THREE.Vector3(  -50,  50, 0 ) );
-
-//create a new face using vertices 0, 1, 2
-var normal = new THREE.Vector3( 0, 0, 1 ); //optional
-var color = new THREE.Color( 0xffaa00 ); //optional
-var materialIndex = 0; //optional
-var face1 = new THREE.Face3( 0, 1, 2, normal, color, materialIndex );
-var face2 = new THREE.Face3( 1,3,0, normal, color, materialIndex );
-
-//add the face to the geometry's faces array
-geometry.faces.push( face1 );
-geometry.faces.push( face2 );
-
-//the face normals and vertex normals can be calculated automatically if not supplied above
-geometry.computeFaceNormals();
-geometry.computeVertexNormals();
-
-return new THREE.Mesh( geometry, material ) ;
-}
 
 function setupGeometry(meshable: Meshable<THREE.Vector3>) {
+
+  const size = 400;
+  const xAxis = new Vector3(1)
   const curryPoint = (z) => ({ x, y }) => new Vector3(x, y, z)
   const curryPoint2 = (z) => ([x, y]) => new Vector3(x, y, z)
-  const curryPoint3 =  ({x, y}) => new Vector3(x, y, 100 + (x+100)/10)
+  const curryPoint3 =  ({x, y}) => new Vector3(x, y, 100 + (x+400)/100)
 
-  // meshable.addPoints( circle(50, 100, 50, curryPoint(-10) ).map( v => v.applyAxisAngle( xAxis, Math.PI/30)), true) 
-  // meshable.addPoints( circle(150, 100, 20, curryPoint(50)), true )
-  meshable.addPoints(circle(20, 20, 33, curryPoint(100)), true)
-  meshable.addPoints(circle(250, 20, 15, curryPoint(200)), true)
+  // meshable.addPoints( circle(50, 50, 22, curryPoint(150) ).map( v => v.applyAxisAngle( xAxis, Math.PI/30)), true) 
+  meshable.addPoints( circle(200, 200, 20, curryPoint(250)), true )
+  // meshable.addPoints(circle(20, 20, 33, curryPoint(100), 3, 2), true)
+  // meshable.addPoints(circle(0, 0, 15, curryPoint(200)), true)
+  // meshable.addPoints(circle(100, 100, 5, curryPoint(50), 4), true)
 
   // // points3d.push( ...line(new Vector3(),new Vector3(-20,30,20), 20 ) )
   // // points3d.push( ...line(new Vector3(),new Vector3(20,30,-40), 20 ) )
-  meshable.addPoints( [new Vector3(150,-50,-20),new Vector3(150, 200,-30)] )
+  // meshable.addPoints( [new Vector3(150,-50,-20),new Vector3(150, 200,-30)] )
   // // meshable.addPoints( line(new Vector3(100,-100,40),new Vector3(100, 30,0), 20 ) )
   // // meshable.addPoints( line(new Vector3(-50,0,0),new Vector3(0,200,0), 20 ) )
-  // meshable.addPoints([new Vector3(-80,-80,0), new Vector3(-60,280,70)])
+  meshable.addPoints_([[100,150],[-100,150],[-100,-50]], false, curryPoint2(105))
+  meshable.addPoints_([[110,100],[-90,100],[-90,-100]], false, curryPoint2(100))
+  meshable.addPoints_([[115,90],[-85,90],[-85,-110]], false, curryPoint2(130))
 
-  meshable.addPoints_([[300, -100], [-100,-100],[-100, 300], [300, 300]], false, curryPoint2(0))
-  meshable.addPoints( [new Vector3(300,170,150), new Vector3(300, -70,150)] )
-  meshable.addPoints( line_( 0,250,200,250,40, curryPoint3 ) )
+  meshable.addPoints_([[size, -size], [-size,-size],[-size, size], [size, size]], false, curryPoint2(0))
+  // meshable.addPoints( [new Vector3(300,170,150), new Vector3(300, -70,150)] )
+  // meshable.addPoints( line_( 0,250,200,250,40, curryPoint3 ) )
   // new Vector3().apply
 
   meshable.averageinterpolator = ({x,y}, p0: Vector3, p1: Vector3) => new Vector3(x,y,(p0.z+p1.z)/2)  
-  meshable.interpolator = interpolator
+  meshable.interpolator = ({x,y}, allPoints ) => new Vector3(x,y, undefined)
 
 }
 

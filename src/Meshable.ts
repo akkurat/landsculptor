@@ -35,7 +35,7 @@ export class Meshable<T extends P> {
   }
 
   averageinterpolator: (newPosition: P,p0: T,p1: T) => T 
-  interpolator: (newPostion: P, eventPointsIdx: number[], allPoints: T[]) => T
+  interpolator: (newPostion: P, allPoints: T[]) => T
 
   /**Input Vertices */
   _points: T[] = []
@@ -191,7 +191,7 @@ export class Meshable<T extends P> {
 
 
 
-          this._steinerPoints.push(this.interpolator(center, t, this._allPoints))
+          this._steinerPoints.push(this.interpolator(center, this._allPoints))
           this.mesh()
           let e = "" + t
           // if(this.removeInsertedSteinerPoint(t)) {
