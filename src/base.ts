@@ -8,8 +8,6 @@ import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
-const filename = require('../textures/grasslight-big.jpg')
-import { createRange, sleep } from './helpers';
 
 import '../index.less'
 import { Meshable, circle, isInsideCircularPath, line_ } from './Meshable';
@@ -170,20 +168,6 @@ function setupGeometry(meshable: Meshable<THREE.Vector3>) {
 
 
 
-function createGrass() {
-  var loader = new THREE.TextureLoader()
-  // loader.setTranscoderPath( 'js/libs/basis/' );
-  // 			loader.detectSupport( renderer );
-
-  var groundTexture = loader.load(filename)
-  groundTexture.encoding = THREE.sRGBEncoding;
-  groundTexture.wrapS = THREE.RepeatWrapping;
-  groundTexture.wrapT = THREE.RepeatWrapping;
-  groundTexture.repeat.set(2, 2)
-  return groundTexture
-
-
-}
 
 function assignUVs(geometry) {
   geometry.faceVertexUvs[0] = [];

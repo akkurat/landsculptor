@@ -3,7 +3,6 @@ import * as THREE from 'three'
 import Stats from 'three/examples/jsm/libs/stats.module.js';
 import { GUI } from 'three/examples/jsm/libs/dat.gui.module.js';
 
-const filename = require('./grass.jpg')
 var camera, scene, renderer, stats;
 
 var mesh;
@@ -106,14 +105,10 @@ function init() {
         [ new THREE.Vector2(0, 0), new THREE.Vector2(1, 1), new THREE.Vector2(0, 1) ],
         [ new THREE.Vector2(0, 0), new THREE.Vector2(1, 0), new THREE.Vector2(1, 1) ]
     )
-    const loader = new THREE.TextureLoader()
-    var groundTexture = loader.load(filename)
-        groundTexture.encoding = THREE.sRGBEncoding;
 
 
     var material = new THREE.MeshBasicMaterial( {
         side: THREE.DoubleSide,
-        map: groundTexture,
         //@ts-ignore
         vertexColors: THREE.FaceColors
     } );
