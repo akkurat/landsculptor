@@ -1,6 +1,6 @@
 // var cleanPSLG = require('clean-pslg')
 import * as cleanPSLG from 'clean-pslg'
-import { A2 } from './Meshable';
+import { A2 } from './Geom';
 
 /**
  * Merges two points of the *same* segment if their distance is < minDistance

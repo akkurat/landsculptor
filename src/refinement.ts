@@ -1,14 +1,18 @@
-import { Meshable, circle, P, line, line_, A2 } from "./Meshable";
 
-import { Point, Color } from 'paper'
-import { Tri, drawTriangle } from "./base";
+
+import { Point, Color, PaperScope } from 'paper'
+import * as RhG from './Geom'
+import {P, A2} from './Geom'
 
 import '../pages/refinement.less'
 import { sleep } from "./helpers";
-import { Vector3 } from "three";
-import { finished } from "stream";
 import { PaperZoom } from "./PaperZoom";
-import { PaperScope } from "paper/dist/paper-core";
+import { Meshable, circle, line_ } from './Meshable';
+
+
+type myP = {
+  x,y, value
+}
 
 const doneSpan = document.getElementById('refinement_finished');
 async function run() {
@@ -28,7 +32,7 @@ async function run() {
   input_maxsize.addEventListener('change', ev => {initMesh(); step()})
 
   // This file should become a class
-  let meshable: Meshable
+  let meshable: Meshable<myP>
   initMesh();
 
 
@@ -80,14 +84,15 @@ async function run() {
     const minAngle = parseFloat(input_angle.value)
     const maxLength = parseFloat(input_maxsize.value)
     meshable = new Meshable({minAngle, maxLength});
-    meshable.addPoints(circle(50, 50, 33, 23, 32), true);
-    meshable.addPoints([{ x: 0, y: 0 }, { x: 0, y: 300 }, { x: 300, y: 300 }, { x: 300, y: 0 }], true);
-    meshable.addPoints_([[50, 150], [50, 100], [120, 120]], true);
-    meshable.addPoints(circle(127, 129, 7, 10, 12), true);
+    const v = (value) =>  (p) => ({...p, value})
+    meshable.addPoints(circle(50, 50, 33, v(10) , 32), true);
+    meshable.addPoints([{ x: 0, y: 0, value: -3 }, { x: 0, y: 300, value: 5 }, { x: 300, y: 300, value:10 }, { x: 300, y: 0, value:5 }], true);
+    meshable.addPoints_([[50, 150], [50, 100], [120, 120]], true, ([x,y]) => ({x,y,value:20}));
+    meshable.addPoints(circle(127, 129, 7, v(10), 12), true);
     //   meshable.addPoints( circle(50, 100, 50, -10 ), true )
     // meshable.addPoints( circle(150, 100, 20, 50), true )
     // meshable.addPoints( line(new Vector3(), new Vector3(200,50), 30)  )
-    meshable.addPoints(line_(50, 170, 160, 140, 5).concat(line_(160, 140, 170, 293, 12)));
+    meshable.addPoints(line_(50, 170, 160, 140,5, v(5)).concat(line_(160, 140, 170, 293,12, v(12))));
     //   meshable.addPoints( line(new Vector3(0,200), new Vector3(200,250), 30)  )
     //   ps.project.activeLayer.fitBounds( ps.view.bounds )
     meshable.init();
@@ -99,7 +104,7 @@ async function run() {
 
       const path = new ps.Path.Line(new Point(p.x, p.y), new Point(q.x, q.y))
       path.strokeColor = new Color('black')
-      const tp = new Point(Tri.vMean(p, q))
+      const tp = new Point(RhG.vMean(p, q))
       // const text =new ps.PointText(tp)
       // text.fontSize = '3px'
       // text.content = e

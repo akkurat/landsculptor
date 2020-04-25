@@ -1,14 +1,13 @@
 import { createRange } from "./helpers"
-import { Tri } from "./base"
+import { Tri } from "./Tri"
 
 import Delaunator from 'delaunator'
-import { Vector2, Vector3 } from "three"
+import * as RhG from "./Geom"
+import { vAdd, scale } from './Geom'
+import { P, A2, A3 } from './Geom'
 
 var cdt2d = require('cdt2d')
 
-export type P = { x: number, y: number }
-export type A3 = [number,number,number]
-export type A2 = [number,number]
 
 
 interface IMeshOptions {
@@ -23,7 +22,7 @@ const defaultMeshOptions: IMeshOptions = {
   min2CircumferenceRatio: 0.2,
   geomTolerance: 0.1
 }
-export class Meshable {
+export class Meshable<T extends P> {
   _del: any
   state: string = 'decroach'
   _steinerBlacklist: A3[] = []
@@ -34,8 +33,10 @@ export class Meshable {
       this.meshOptions = {...defaultMeshOptions, ...meshOptions}
    }
 
+  interpolator: (newPostion: P, eventPoints: T[], allPoints: T[]) => T
+
   /**Input Vertices */
-  _points: P[] = []
+  _points: T[] = []
 
   /**Input segments (PSLG). Rupert refers to the input as segment and to the triangulation lines as edges */
   _segment: A2[] = []
@@ -45,25 +46,25 @@ export class Meshable {
   _mesh: A3[]
 
   /** Points inserted to split input segments */
-  _antiCroachPoints: P[] = []
+  _antiCroachPoints: T[] = []
   /** Points inserted to improve triangle quality */
-  _steinerPoints: P[] = []
+  _steinerPoints: T[] = []
   // Delaunator uses native arrays for point storage
   // -> efficiency improvements
-  _allPoints: P[] = []
+  _allPoints: T[] = []
 
   min_length = 5
   // max_length 
 
-  addPoints_(points: A2[], closed=false ) {
-    return this.addPoints( points.map( ([x,y]) => ({x,y}) ), closed )
+  addPoints_(points: A2[], closed=false, factory: ([x,y]) => T ) {
+    return this.addPoints( points.map( factory ), closed )
   }
   /**
    * add points connected in order of the given array
    * @param points 
    * @param closed if true, first and last point form an edge as well
    */
-  addPoints(points: P[], closed = false) {
+  addPoints(points: T[], closed = false) {
     const offset = this._points.length
 
     this._points.push(...points)
@@ -72,10 +73,9 @@ export class Meshable {
       this.addEdge(i, i+1)
     }
 
-    if (closed) {
+    if (closed && points.length > 1) {
       this.addEdge( offset, this._points.length-1 )
     }
-
   }
 
   private addEdge(i0: number, i1: number) {
@@ -148,13 +148,17 @@ export class Meshable {
   }
 
   private splitSegment(segmentIndex: number, newPoint: P) {
-        const toSplitEdge = this._allSegments[segmentIndex]
+       const toSplitEdge = this._allSegments[segmentIndex]
+
+       const [i0,i1] = toSplitEdge
+       const p0 = this._allPoints[i0], p1 = this._allPoints[i1]
+
         const newPtIndex = this._points.length + this._antiCroachPoints.length
 
         this._allSegments.push([toSplitEdge[1],newPtIndex])
         toSplitEdge[1] = newPtIndex
 
-        this._antiCroachPoints.push(newPoint)
+        this._antiCroachPoints.push(this.interpolator(newPoint, [p0, p1], this._points))
         this.updatePoints()
 
         // this._allSegments = 
@@ -164,7 +168,6 @@ export class Meshable {
     
     for( const t of this._mesh ) {
       const tri = Tri.ofArray_(t,this._allPoints)
-      // TODO: go for angle
       if(this.badTriangleCriterion(tri)) {
 
         const {center,r}  = tri.circumference()
@@ -172,8 +175,8 @@ export class Meshable {
          {
             for (let [idx,segment] of this._allSegments.entries()) {
               const [p0,p1] = segment.map(idx => this._allPoints[idx])
-              const pc = Tri.vMean(p0,p1)
-              const l = Tri.distance(p0,p1)
+              const pc = RhG.vMean(p0,p1)
+              const l = RhG.distance(p0,p1)
               if( this.inCircle(center, pc, l/2) ) {
                 this.splitSegment( idx, pc )
                 return [{seC: pc, seL: l, edge: idx}]
@@ -182,7 +185,8 @@ export class Meshable {
 
 
 
-              this._steinerPoints.push(center)
+              const points = [tri.a, tri.b, tri.c]
+              this._steinerPoints.push( this.interpolator(center, points, this._allPoints) )
               this.mesh()
               let e = "" + t
               // if(this.removeInsertedSteinerPoint(t)) {
@@ -218,8 +222,8 @@ export class Meshable {
   }
 
   splitAndAdd = (p0, p1, edgeIdx, edge) => {
-    const seC = Tri.vMean(p0, p1)
-    const seL = Tri.distance(p0, p1)
+    const seC = RhG.vMean(p0, p1)
+    const seL = RhG.distance(p0, p1)
     // if (this.min_length > seL) {
     //   return []
     // }
@@ -231,7 +235,7 @@ export class Meshable {
     const close = ({ x, y }) => Math.abs(x - seC.x) < tol
       && Math.abs(y - seC.y) < tol
 
-    const p01 = Tri.vSub(p1,p0)
+    const p01 = RhG.vSub(p1,p0)
 
     const res = this._allPoints.filter(inCircum)
 
@@ -241,7 +245,7 @@ export class Meshable {
 
       // Not sure why they even occur
 
-      const alignedPoint = res.find( p => Math.abs(crossProduct(p01, Tri.vSub(p, p0))) < 0.5)
+      const alignedPoint = res.find( p => Math.abs(crossProduct(p01, RhG.vSub(p, p0))) < 0.5)
 
       console.log(alignedPoint)
 
@@ -275,7 +279,7 @@ export class Meshable {
     //  return self.indexOf(value) === index;
     //  }
 
-    const richPoint = (p0, p1, idx0, idx1, segmentIdx) => ({ l: Tri.distance(p0, p1), p0, p1, idx0, idx1, segmentIdx})
+    const richPoint = (p0, p1, idx0, idx1, segmentIdx) => ({ l: RhG.distance(p0, p1), p0, p1, idx0, idx1, segmentIdx})
     const presentEdges = this._allSegments.map( ([idx0,idx1], idx) => {
       const p0 = this._allPoints[idx0]
       const p1 = this._allPoints[idx1]
@@ -337,21 +341,24 @@ forEachTriangleEdge(callback: (e,p,q) => void) {
 }
 
 
-export function line_(x1, y1, x2, y2, points: number): { x: number, y: number }[] {
-  return line(new Vector3(x1,y1), new Vector3(x2,y2), points)
+export function line_<T extends P>(x1, y1, x2, y2, points: number, v: (p:P) => T ): T[] {
+  return line({x:x1,y:y1}, {x:x2,y:y2}, points, v )
   
 }
-export function line(vStart: THREE.Vector3, vEnd: THREE.Vector3, points: number): { x: number, y: number }[] {
-  const delta = vEnd.clone().sub(vStart).multiplyScalar(1 / (points - 1))
+export function line<T extends P>(vStart: P, vEnd: P, numPoints: number,
+  pointFactory = (p:P) => p ): T[] {
 
-  const out = Array(points)
+  const delta = RhG.scale(RhG.vSub(vEnd, vStart), (1 / (numPoints - 1) ) )
+
+  const out = Array(numPoints)
   for (let i = 0; i < out.length; i++) {
-    out[i] = vStart.clone().addScaledVector(delta, i)
+    out[i] = pointFactory( vAdd(vStart, scale(delta, i) ) )
+
   }
   return out;
 
 }
-export function circle(x, z, r, h = 0, numInnerPoints=24, layers = 1): { x: number, y: number }[] {
+export  function circle<T extends P>(x, y, r, factory: (p:P)=> T, numInnerPoints=24, layers = 1): T[] {
   const points = []
 
   for (let i = layers; i >= 1; i--) {
@@ -361,11 +368,15 @@ export function circle(x, z, r, h = 0, numInnerPoints=24, layers = 1): { x: numb
       const cos = Math.cos(v)
       // if (idx % (layers - i) == 0) {
       const factor = r * i / layers
-      points.push({ x: factor * cos + x, y: factor * sin + z })
+      let p ={ x: factor * cos + x, y: factor * sin + y } 
+      if( typeof factory === 'function')
+      {
+        p = factory(p) 
+      }
+      points.push(p)
       // }
     })
   }
-  // points.push({ x: x, y: z })
   return points;
 }
 
