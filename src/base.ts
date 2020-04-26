@@ -1,5 +1,6 @@
+import "./styles/index.less"
 
-import RBF from 'rbf'
+var RBF = require('rbf');
 import * as THREE from 'three';
 import { BufferGeometry, Vector3, Vector2, VertexColors, DoubleSide, FaceColors, RGBFormat } from 'three'
 
@@ -84,7 +85,7 @@ export async function run() {
 
     geom.faces.push(face);
 
-    const tri = Tri.ofArray_(t, meshable._allPoints)
+    const tri = Tri.ofArray_(t, meshable._allPoints, p => p )
     const path = pa.drawTriangle(tri);
     path.strokeColor = new Color('black')
     path.fillColor = new Color(lastColor)

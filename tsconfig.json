@@ -17,5 +17,5 @@
     "alwaysStrict": false,
     "lib": ["ES6", "DOM","DOM.Iterable","ScriptHost","ES2019"]
 
-  }
+  },
 }

@@ -1,7 +1,7 @@
 import { createRange } from "./helpers"
 import { Tri } from "./Tri"
 
-import Delaunator from 'delaunator'
+import * as Delaunator from 'delaunator'
 import * as RhG from "./Geom"
 import { vAdd, scale } from './Geom'
 import { P, A2, A3 } from './Geom'

@@ -53,17 +53,19 @@ export class Tri {
    * @param y
    *
    */
-  static ofArray_<T>([a, b, c]: number[], points: T[], x?: (T) => number, y?: (T) => number) {
-    return Tri.ofArray(a, b, c, points, x, y);
+  static ofArray_<T extends P>([a, b, c]: number[], points: T[], factory:( (p: P) => T) ) {
+    return Tri.ofArray(a, b, c, points, factory);
   }
-  static ofArray<T>(_a: number, _b: number, _c: number, points: T[], x?: (T) => number, y?: (T) => number) {
+  static ofArray<T extends P>(_a: number, _b: number, _c: number, points: T[], factory?: (p: P) => T ) {
     const tripoints = [_a, _b, _c].map(eP);
     //@ts-ignore this is perfectly valid
     return new Tri(...tripoints);
     function eP(idx) {
       const p = points[idx];
-      //@ts-ignore
-      return new Vector2(x ? x(p) : p.x, y ? y(p) : p.y);
+      if(typeof factory === 'function') {
+        return factory(p)
+      }
+      return p
     }
   }
 }

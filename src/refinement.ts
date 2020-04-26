@@ -4,7 +4,7 @@ import { Point, Color, PaperScope } from 'paper'
 import * as RhG from './Geom'
 import {P, A2} from './Geom'
 
-import '../pages/refinement.less'
+import "./styles/refinement.less"
 import { sleep } from "./helpers";
 import { PaperZoom } from "./PaperZoom";
 import { Meshable, circle, line_ } from './Meshable';
