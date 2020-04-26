@@ -10,7 +10,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 import { TransformControls } from 'three/examples/jsm/controls/TransformControls.js';
 
 
-import '../index.less'
 import { Meshable, circle, isInsideCircularPath, line_ } from './Meshable';
 import { Tri } from './Tri';
 import { PaperZoom } from './PaperZoom';

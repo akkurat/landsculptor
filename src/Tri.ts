@@ -1,4 +1,3 @@
-import { Vector2 } from 'three';
 import { P } from './Geom';
 import * as RhG from './Geom'
 export class Tri {
@@ -42,7 +41,7 @@ export class Tri {
     const x = 1 / D * (bb * c.y - cc * b.y);
     const y = 1 / D * (cc * b.x - bb * c.x);
     const out = RhG.vAdd(this.a, { x, y });
-    return { r: Math.sqrt(x ** 2 + y ** 2), center: new Vector2(out.x, out.y) };
+    return { r: Math.sqrt(x ** 2 + y ** 2), center: out };
   }
   /**
    *

@@ -3,7 +3,7 @@
     "outDir": "./dist/",
     "noImplicitAny": false,
     "sourceMap": true,
-    "module": "es6",
+    "module": "es2020",
     "moduleResolution": "Node",
     "allowSyntheticDefaultImports": true,
     "target": "es6",
